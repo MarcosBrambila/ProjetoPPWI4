@@ -1,0 +1,5 @@
+package com.lojaconstrucao.web.response;
+
+public class SystemErrorMessage {
+
+}

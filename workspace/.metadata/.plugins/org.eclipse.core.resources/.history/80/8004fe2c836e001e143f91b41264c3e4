@@ -1,0 +1,5 @@
+package com.lojaconstrucao.web.exception;
+
+public class SystemExceptionHandler {
+
+}

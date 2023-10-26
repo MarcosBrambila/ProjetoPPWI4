@@ -1,0 +1,5 @@
+package com.lojaconstrucao.web.controllers;
+
+public class UserRestController {
+
+}

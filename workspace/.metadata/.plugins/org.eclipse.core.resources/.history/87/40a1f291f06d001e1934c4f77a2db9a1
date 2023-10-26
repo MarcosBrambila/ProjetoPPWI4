@@ -1,0 +1,5 @@
+package com.folhapagamento.models.pk;
+
+public class PrimaryKey {
+
+}

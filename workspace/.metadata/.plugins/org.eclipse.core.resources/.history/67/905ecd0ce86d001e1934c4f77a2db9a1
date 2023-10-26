@@ -1,0 +1,5 @@
+package com.lojaconstrucao.config;
+
+public class ModelMapperConfig {
+
+}

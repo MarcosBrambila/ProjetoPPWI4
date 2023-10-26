@@ -1,0 +1,5 @@
+package com.lojaconstrucao.model.data;
+
+public class ProdutoRequest {
+
+}

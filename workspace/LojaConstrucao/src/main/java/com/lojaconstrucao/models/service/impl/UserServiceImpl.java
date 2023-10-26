@@ -1,0 +1,122 @@
+package com.lojaconstrucao.models.service.impl;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.lojaconstrucao.models.data.UserRequest;
+import com.lojaconstrucao.models.data.UserResponse;
+import com.lojaconstrucao.models.model.User;
+import com.lojaconstrucao.models.repository.UserRepository;
+import com.lojaconstrucao.models.service.UserService;
+import com.lojaconstrucao.models.service.exception.EmailAlreadyExistsException;
+import com.lojaconstrucao.models.service.exception.EntityNotFoundException;
+import com.lojaconstrucao.models.service.exception.PasswordConfirmationException;
+import com.lojaconstrucao.models.service.mapper.EntityConversor;
+import com.lojaconstrucao.models.service.pagination.PageRequestConfig;
+
+@Service
+@Transactional 
+public class UserServiceImpl implements UserService {
+
+	@Autowired 
+	private UserRepository userRepository; 
+	
+	@Autowired
+	private EntityConversor entityConversor;
+	
+	@Override
+	public UserResponse save(UserRequest entity) {
+		User user = entityConversor.parseObject(entity, User.class);
+		
+		Optional<User> userSaved = userRepository.findByEmail(user.getEmail());
+		if(userSaved.isPresent() && userSaved.get().equals(user)) {
+			throw new EmailAlreadyExistsException("O email informado já está cadastrado");
+		}
+		if(!entity.getPassword().equals(entity.getRePassword())) {
+			throw new PasswordConfirmationException("A senha de confirmação e a senha não conferem");
+		}
+		
+		user = userRepository.save(user);
+		UserResponse userResponse = entityConversor.parseObject(user, UserResponse.class);
+		
+		return userResponse;
+	}
+	
+	@Override
+	public UserResponse update(Long id, UserRequest entity) {
+		User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Entidade não encontrada"));
+		User userConv = entityConversor.parseObject(entity, User.class);
+		
+		if(!entity.getPassword().equals(entity.getRePassword())) {
+			throw new PasswordConfirmationException("A senha de confirmação e a senha não conferem");
+		}
+		
+		user.setRePassword(entity.getRePassword());
+		user.setEmail(entity.getEmail());
+		user.setPassword(entity.getPassword());
+		user.setUserName(entity.getUserName());
+		
+		user = userRepository.saveAndFlush(user); //Força o salvamento sem ficar em memória intermediária
+		UserResponse userResponse = entityConversor.parseObject(userConv, UserResponse.class);
+		
+		return userResponse;
+	}
+
+	@Override
+	public void delete(Long id) {
+		userRepository.deleteById(id);
+	}
+
+	@Override
+	@Transactional(readOnly = true) //Desativa a escrita, não são necessárias transações
+	public UserResponse read(Long id) {	
+		User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Entidade não encontrada"));
+		
+		return entityConversor.parseObject(user, UserResponse.class);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<UserResponse> list() {
+		return entityConversor.parseListObjects(userRepository.findAll(), UserResponse.class);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<UserResponse> list(String key) {
+		return entityConversor.parseListObjects(userRepository.findByUserName(key), UserResponse.class);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Page<UserResponse> listPaged(Integer actualPage, Integer pageSize, String order, String props) {
+		
+		Pageable page = PageRequestConfig.generatePage(actualPage, pageSize, order, props);
+		
+		Page<User> userList = userRepository.findAllPagination(page);
+		List<UserResponse> userListResponse = entityConversor.parseListObjects(userList.getContent(), UserResponse.class);
+		Page<UserResponse> pageUserResponse = new PageImpl<>(userListResponse, userList.getPageable(), userList.getTotalElements());
+		
+		return pageUserResponse;
+	}
+
+	@Override
+	public Page<UserResponse> listPagedByKey(String key, Integer actualPage, Integer pageSize, String order,
+			String props) {
+		Pageable page = PageRequestConfig.generatePage(actualPage, pageSize, order, props);
+		
+		Page<User> userList = userRepository.findAllPaginationWithKey(key, page);
+		List<UserResponse> userListResponse = entityConversor.parseListObjects(userList.getContent(), UserResponse.class);
+		Page<UserResponse> pageUserResponse = new PageImpl<>(userListResponse, userList.getPageable(), userList.getTotalElements());
+		
+		return pageUserResponse;
+	}
+	
+}
